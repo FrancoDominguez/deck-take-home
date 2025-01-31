@@ -76,8 +76,8 @@ async def test_validate_json():
     """
     Verifies the extracted json format is correct and that the files were successfully downloaded
     """
+    clear_folder(test_output_path)
     async with async_playwright() as p:
-        clear_folder(test_output_path)
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto("https://deck-dev-eastus2-academy.yellowrock-2749f805.eastus2.azurecontainerapps.io/mfa-login")
