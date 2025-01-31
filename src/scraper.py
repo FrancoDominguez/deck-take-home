@@ -1,4 +1,5 @@
 from playwright.async_api import async_playwright
+import os
 import re
 import time
 import json
@@ -6,6 +7,7 @@ import json
 username = "admin"
 password = "password123"
 scraped_data = list()
+
 
 # although the script is relatively short, separating it in steps made it much cleaner
 # I avoided creating new files to follow the suggested project structure
@@ -45,7 +47,7 @@ async def login(page):
     await verify_button.wait_for(state="visible")
     await verify_button.click()
 
-async def extract_account_details(page):
+async def extract_account_details(page, output_path):
     # I assume that there could be more than 2 address/accounts under the same login
     accounts = await page.locator(".grid.md\\:grid-cols-2.gap-6.mb-8").locator('.bg-white.rounded-lg.shadow-md.p-6').all()
     
@@ -71,7 +73,7 @@ async def extract_account_details(page):
         acc_details["current balance"] = re.search(r"Current Balance:\s*(.*?)\s*Due Date:", acc_details_str).group(1)
 
         # and download the latest bill for each account
-        filename = f"./output/{acc_details['account name'].replace(' ', '_')}_latest_bill.pdf"
+        filename = f"{output_path}/{acc_details['account name'].replace(' ', '_')}_latest_bill.pdf"
         acc_details["latest bill"] = filename # this line saves the file path to the json
         download_btn = account.locator("text=Latest Bill")
         await download_btn.wait_for(state="visible")
@@ -85,12 +87,7 @@ async def extract_account_details(page):
         acc_details["statements"] = list()
         scraped_data.append(acc_details)
 
-def extract_recent_statements_sync(page):
-    # original sync version kept for reference or other usage
-    # but won't work in async tests
-    pass
-
-async def extract_recent_statements(page):
+async def extract_recent_statements(page, output_path):
     file_id = 0
     while True: # while loop to handle pagination with a condition at the bottom to mimic do:while
         recent_statements = page.locator("text=Recent Statements").locator("..").locator("table tbody tr")
@@ -103,7 +100,7 @@ async def extract_recent_statements(page):
             date = (await values[1].text_content()).strip()
             amount = (await values[2].text_content()).strip()
             usage = (await values[3].text_content()).strip()
-            filename = f"./output/{date.replace(' ', '')}_{file_id}.pdf"
+            filename = f"{output_path}/{date.replace(' ', '')}_{file_id}.pdf"
             file_id += 1
 
             # adding file_id is my solution to potential duplicates (they do happen)
@@ -130,12 +127,13 @@ async def extract_recent_statements(page):
                         break
                 else:
                     raise ValueError("invalid account name")
+                time.sleep(0.2) # small delay to slow down downloads
             except Exception as e:
                 print(e)
 
         # scroll to view the 'next' button if there is one
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await page.wait_for_timeout(1000) # in place of time.sleep(1)
+        await page.wait_for_timeout(1000)
 
         # checking if there is another page, if not end the loop
         next_btn = page.locator('a[href*="?page="]:has-text("Next")')
@@ -145,31 +143,34 @@ async def extract_recent_statements(page):
             break;
         await page.wait_for_timeout(1000)
 
-# isolated this to run it in tests with headless option
-async def scrape(page):
+def save_data(data, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    file_path = os.path.join(output_dir, "data.json")
+    with open(file_path, "w") as f:
+        json.dump(data, f)
+
+# isolated this to run it in tests with headless option and to allow for potentially testing on other browsers easily
+async def scrape(page, output_path):
     await accept_cookies(page)
     await login(page)
-    extract_account_details_sync(page) # remain for reference if needed
-    extract_recent_statements_sync(page) # remain for reference if needed
-    await extract_account_details(page)
-    await extract_recent_statements(page)
+    await extract_account_details(page, output_path)
+    await extract_recent_statements(page, output_path)
 
-    # save the data to a file
-    with open("./output/data.json", "w") as f:
-        json.dump(scraped_data, f, indent=4)
+    save_data(scraped_data, output_path)
+
+
+    
 
 async def run_script():
-    # I go straight to /mfa-login login page to avoid needless playwright
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=False)
         page = await browser.new_page(java_script_enabled=True)
+        # I go straight to /mfa-login login page to avoid needless playwright
         await page.goto("https://deck-dev-eastus2-academy.yellowrock-2749f805.eastus2.azurecontainerapps.io/mfa-login")
+        output_path = "./output"
 
-        await scrape(page)
+        await scrape(page, f"{output_path}/data.json")
 
         await page.close()
         await browser.close()
-
-
-
 
