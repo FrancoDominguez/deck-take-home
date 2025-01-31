@@ -43,7 +43,10 @@ schema = {
         ]
     }
 }
+
 def clear_folder(folder_path):
+    if not os.path.exists(folder_path):
+        return
     for item in os.listdir(folder_path):
         path = os.path.join(folder_path, item)
         if os.path.isdir(path):
