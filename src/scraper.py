@@ -20,11 +20,11 @@ async def accept_cookies(page):
 async def login(page):
     username_input = page.locator("input#username")
     await username_input.wait_for(state="visible")
-    await username_input.fill("admin")
+    await username_input.fill(username)
 
     password_input = page.locator("input#password")
     await password_input.wait_for(state="visible")
-    await password_input.fill("password123")
+    await password_input.fill(password)
 
     continue_button = page.locator("button[type='submit']")
     await continue_button.wait_for(state="visible")

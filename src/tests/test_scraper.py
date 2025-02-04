@@ -5,6 +5,7 @@ import shutil
 from playwright.async_api import async_playwright
 from jsonschema import validate
 from src.scraper import login, accept_cookies, scrape
+from src.config import headless
 
 # not the cleanest way I could've handled a separate output folder for tests but it does for now
 test_output_path = "./output.tests"
@@ -60,7 +61,7 @@ async def test_confirm_login():
     Verifies the user is logged in by expecting a logout button to be visisble
     """
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=headless)
         page = await browser.new_page()
         await page.goto("https://deck-dev-eastus2-academy.yellowrock-2749f805.eastus2.azurecontainerapps.io/mfa-login")
 
@@ -78,7 +79,7 @@ async def test_validate_json_and_files():
     """
     clear_folder(test_output_path)
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=headless)
         page = await browser.new_page()
         await page.goto("https://deck-dev-eastus2-academy.yellowrock-2749f805.eastus2.azurecontainerapps.io/mfa-login")
 

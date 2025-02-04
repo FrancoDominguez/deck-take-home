@@ -3,9 +3,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+username = os.getenv('USERNAME')
 password = os.getenv('PASSWORD')
 MFACode = os.getenv('MFACODE')
-username = os.getenv('USERNAME')
+headless_env = os.getenv('HEADLESS')
+
+headless = True
+if headless_env == "False":
+    headless = False
+
+print("printing headless var", headless)
+
+    
+
+
 
 
 
