@@ -1,11 +1,10 @@
 from playwright.async_api import async_playwright
+from src.config import *
 import os
 import re
 import time
 import json
 
-username = "admin"
-password = "password123"
 scraped_data = list()
 
 
@@ -41,14 +40,14 @@ async def login(page):
 
     code_input = page.locator("input#mfa_code")
     await code_input.wait_for(state="visible")
-    await code_input.fill("123456")
+    await code_input.fill(MFACode)
 
     verify_button = page.locator("button[type='submit']")
     await verify_button.wait_for(state="visible")
     await verify_button.click()
 
 async def extract_account_details(page, output_path):
-    # I assume that there could be more than 2 address/accounts under the same login
+    # I assume that there could be more than 2 addresses/accounts under the same login
     accounts = await page.locator(".grid.md\\:grid-cols-2.gap-6.mb-8").locator('.bg-white.rounded-lg.shadow-md.p-6').all()
     
     # for each account we will extract the main details
@@ -67,14 +66,14 @@ async def extract_account_details(page, output_path):
         acc_details_str = await account.locator("div", has_text="Current Balance:").nth(0).text_content()
         acc_details_str = re.sub(r'\s+', ' ', acc_details_str)
 
-        # text_content of a span extracts all values as a single string therefore:
+        # text_content of a span extracts all values as a single string, therefore:
         acc_details["last month usage"] = acc_details_str.split("Last Month Usage: ")[-1].strip()
         acc_details["due date"] = re.search(r"Due Date:\s*(.*?)\s*Last Month Usage", acc_details_str).group(1)
         acc_details["current balance"] = re.search(r"Current Balance:\s*(.*?)\s*Due Date:", acc_details_str).group(1)
 
         # and download the latest bill for each account
         filename = f"{output_path}/{acc_details['account name'].replace(' ', '_')}_latest_bill.pdf"
-        acc_details["latest bill"] = filename # this line saves the file path to the json
+        acc_details["latest bill"] = filename # this line saves the file path to the dict
         download_btn = account.locator("text=Latest Bill")
         await download_btn.wait_for(state="visible")
 
@@ -157,9 +156,6 @@ async def scrape(page, output_path):
     await extract_recent_statements(page, output_path)
 
     save_data(scraped_data, output_path)
-
-
-    
 
 async def run_script():
     async with async_playwright() as playwright:

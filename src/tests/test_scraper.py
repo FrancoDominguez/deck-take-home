@@ -72,7 +72,7 @@ async def test_confirm_login():
         await browser.close()
 
 @pytest.mark.asyncio
-async def test_validate_json():
+async def test_validate_json_and_files():
     """
     Verifies the extracted json format is correct and that the files were successfully downloaded
     """
